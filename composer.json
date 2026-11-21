@@ -1,0 +1,20 @@
+{
+    "name": "zasend/zasend-php",
+    "description": "PHP SDK for the zaSend transactional email API",
+    "type": "library",
+    "license": "MIT",
+    "keywords": ["email", "transactional-email", "email-api", "smtp", "zasend"],
+    "homepage": "https://zasend.com/docs",
+    "authors": [{"name": "zaSend", "email": "support@zasend.com"}],
+    "require": {
+        "php": ">=8.1",
+        "ext-curl": "*",
+        "ext-json": "*"
+    },
+    "autoload": {
+        "psr-4": {"ZaSend\\": "src/"}
+    },
+    "scripts": {
+        "test": "php tests/run.php"
+    }
+}
