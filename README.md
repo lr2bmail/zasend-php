@@ -15,7 +15,7 @@ composer require zasend/zasend-php
 ```php
 use ZaSend\ZaSend;
 
-$client = new ZaSend('sk_live_...');
+$client = new ZaSend(getenv('ZASEND_API_KEY'));
 
 $result = $client->sendEmail([
     'from' => 'Acme <noreply@yourdomain.com>',
@@ -68,7 +68,20 @@ A partial failure is not an exception: check `failed` and each item's `status`.
 | `ZaSend\Exception\ValidationException` | 400, 413, 415, 422: invalid request or a suppressed recipient |
 | `ZaSend\Exception\ApiException` | any other error, or the API could not be reached |
 
-All have `getStatusCode()`, `getErrorCode()` (for example `rate_limited`) and `getBody()`.
+All have `getStatusCode()`, `getErrorCode()` (for example `rate_limited`) and `getBody()`. When the API key lacks access, a 403 `ApiException` has `getMissingPermission()` (for example `inbound`).
+
+## Which key do I need?
+
+Create API keys on the **API keys** page of the dashboard. Each key has an access level and can be limited to one domain:
+
+| Access | Use it for |
+|---|---|
+| Sending only | Apps that only send: `sendEmail`, `sendBatch`, `getEmail`, `getRateLimits` |
+| Agent | Sending plus reading received email (`listInboundMessages`, `getInboundMessage`) |
+| Full access | Everything, including domains, templates, webhooks, SMTP passwords and API keys |
+| Custom | Pick permissions: send, status, inbound, smtp, templates, suppressions, webhooks, domains |
+
+SMTP passwords (`smtp_live_...`) are for SMTP apps and don't work with this SDK; older domain keys (`dsk_live_...`) can still send.
 
 ## Webhooks
 
@@ -96,7 +109,9 @@ $event = json_decode($body, true);  // "accepted_by_postfix", "bounced", "compla
 | `listSuppressions()`, `addSuppression()`, `deleteSuppression()` | `/suppressions` |
 | `listWebhooks()`, `createWebhook()`, `deleteWebhook()` | `/webhooks` |
 | `listTemplates()`, `createTemplate()`, `getTemplate()`, `updateTemplate()`, `deleteTemplate()` | `/templates` |
-| `getInboundMessage()`, `downloadInboundAttachment()`, `downloadInboundRaw()` | `/inbound` |
+| `listInboundMessages()`, `getInboundMessage()`, `downloadInboundAttachment()`, `downloadInboundRaw()` | `/inbound` |
+| `listSmtpPasswords()`, `createSmtpPassword($domain, $name)`, `deleteSmtpPassword()` | `/smtp-passwords` (the new password is returned once) |
+| `listApiKeys()`, `createApiKey($name, $access, $domain)`, `revokeApiKey()` | `/api-keys` (needs Full access) |
 
 Full API: [zasend.com/docs](https://zasend.com/docs) · OpenAPI: [zasend.com/api/v1/openapi.json](https://zasend.com/api/v1/openapi.json)
 

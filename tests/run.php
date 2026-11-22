@@ -121,5 +121,29 @@ check(!Webhook::verifySignatureV2($body, 's3cret', $v2, 300, 1700001000), 'v2 to
 check(!Webhook::verifySignatureV2($body . ' ', 's3cret', $v2, 300, 1700000100), 'v2 body changed');
 check(!Webhook::verifySignatureV2($body, 's3cret', 'garbage', 300, 1700000100), 'v2 malformed');
 
+// SMTP passwords, API keys, inbox list
+fake(200, '{"smtp_passwords":[]}', $seen)->listSmtpPasswords('acme.com');
+check($seen['method'] === 'GET' && $seen['url'] === 'https://api.test/v1/smtp-passwords?domain=acme.com', 'list smtp passwords');
+fake(201, '{"password":"smtp_live_x"}', $seen)->createSmtpPassword('acme.com', 'WordPress');
+check($seen['url'] === 'https://api.test/v1/smtp-passwords' && json_decode($seen['payload'], true) === ['domain' => 'acme.com', 'name' => 'WordPress'], 'create smtp password');
+fake(204, '', $seen)->deleteSmtpPassword('pw/1');
+check($seen['method'] === 'DELETE' && $seen['url'] === 'https://api.test/v1/smtp-passwords/pw%2F1', 'delete smtp password');
+fake(200, '{"api_keys":[]}', $seen)->listApiKeys();
+check($seen['url'] === 'https://api.test/v1/api-keys', 'list api keys');
+fake(201, '{"key":"zs_live_x"}', $seen)->createApiKey('Bot', 'agent', 'acme.com');
+check(json_decode($seen['payload'], true) === ['name' => 'Bot', 'access' => 'agent', 'domain' => 'acme.com'], 'create api key');
+fake(201, '{"key":"zs_live_y"}', $seen)->createApiKey('Plain');
+check(json_decode($seen['payload'], true) === ['name' => 'Plain'], 'create api key defaults');
+fake(204, '', $seen)->revokeApiKey('k1');
+check($seen['url'] === 'https://api.test/v1/api-keys/k1', 'revoke api key');
+fake(200, '{"messages":[]}', $seen)->listInboundMessages(['limit' => 5, 'unread' => true]);
+check($seen['url'] === 'https://api.test/v1/inbound?limit=5&unread=1', 'list inbound');
+try {
+    fake(403, '{"error":"forbidden","message":"no inbound","missing_permission":"inbound"}', $seen)->listInboundMessages();
+    check(false, 'missing permission throws');
+} catch (ApiException $e) {
+    check($e->getStatusCode() === 403 && $e->getMissingPermission() === 'inbound', 'missing permission on the exception');
+}
+
 echo ($failures === 0 ? 'OK' : 'FAILED') . " ($count checks, $failures failed)\n";
 exit($failures === 0 ? 0 : 1);

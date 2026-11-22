@@ -35,4 +35,10 @@ class ApiException extends ZaSendException
     {
         return is_array($this->body) && isset($this->body['error']) ? (string) $this->body['error'] : null;
     }
+
+    /** On a 403 when the API key lacks a permission, which one (for example "inbound"). */
+    public function getMissingPermission(): ?string
+    {
+        return is_array($this->body) && isset($this->body['missing_permission']) ? (string) $this->body['missing_permission'] : null;
+    }
 }

@@ -17,7 +17,7 @@ use ZaSend\Exception\ZaSendException;
 final class ZaSend
 {
     public const DEFAULT_BASE_URL = 'https://zasend.com/api/v1';
-    public const VERSION = '0.1.0';
+    public const VERSION = '0.2.0';
 
     private string $apiKey;
     private string $baseUrl;
@@ -156,6 +156,56 @@ final class ZaSend
         $this->request('DELETE', '/templates/' . rawurlencode($templateId));
     }
 
+    /**
+     * Received messages, newest first, without bodies.
+     * @param array{limit?: int, domain?: string, to?: string, unread?: bool} $params
+     */
+    public function listInboundMessages(array $params = []): array
+    {
+        if (array_key_exists('unread', $params)) {
+            $params['unread'] = $params['unread'] ? '1' : null;
+        }
+        return $this->request('GET', '/inbound' . self::query($params));
+    }
+
+    /** SMTP passwords for SMTP apps (never the passwords themselves). */
+    public function listSmtpPasswords(?string $domain = null): array
+    {
+        return $this->request('GET', '/smtp-passwords' . self::query(['domain' => $domain]));
+    }
+
+    /** A new SMTP password; it is in "password" and returned only once. Works over SMTP only. */
+    public function createSmtpPassword(string $domain, ?string $name = null): array
+    {
+        return $this->request('POST', '/smtp-passwords', ['domain' => $domain, 'name' => $name]);
+    }
+
+    public function deleteSmtpPassword(string $passwordId): void
+    {
+        $this->request('DELETE', '/smtp-passwords/' . rawurlencode($passwordId));
+    }
+
+    /** Needs a Full access key. */
+    public function listApiKeys(): array
+    {
+        return $this->request('GET', '/api-keys');
+    }
+
+    /**
+     * @param string|string[]|null $access "sending", "agent", "full" (default) or a list of permissions
+     * @param string|null $domain limit the key to one verified domain
+     * The new key is in "key" and returned only once.
+     */
+    public function createApiKey(string $name, $access = null, ?string $domain = null): array
+    {
+        return $this->request('POST', '/api-keys', ['name' => $name, 'access' => $access, 'domain' => $domain]);
+    }
+
+    public function revokeApiKey(string $keyId): void
+    {
+        $this->request('DELETE', '/api-keys/' . rawurlencode($keyId));
+    }
+
     /** A received message with its text, HTML and attachment list (no file content). */
     public function getInboundMessage(string $messageId): array
     {
@@ -172,6 +222,12 @@ final class ZaSend
     public function downloadInboundRaw(string $messageId): string
     {
         return $this->request('GET', '/inbound/' . rawurlencode($messageId) . '/raw', null, [], true);
+    }
+
+    private static function query(array $params): string
+    {
+        $query = http_build_query(array_filter($params, static fn ($v) => $v !== null));
+        return $query !== '' ? '?' . $query : '';
     }
 
     /** @return array<string,string> */
